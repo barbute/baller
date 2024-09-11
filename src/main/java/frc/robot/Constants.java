@@ -25,8 +25,11 @@ import edu.wpi.first.wpilibj.RobotBase;
  */
 public final class Constants {
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : Mode.SIM;
-  /** Used to publish extra outputs, use test bindings, etc. 
-   * <p> Should be disabled when in competition. */
+  /**
+   * Used to publish extra outputs, use test bindings, etc.
+   *
+   * <p>Should be disabled when in competition.
+   */
   public static final boolean debuggingModeEnabled = true;
 
   public static enum Mode {
