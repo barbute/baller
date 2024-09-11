@@ -24,13 +24,13 @@ import edu.wpi.first.wpilibj.RobotBase;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
-  public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : Mode.SIM;
+  public static final Mode CURRENT_MODE = RobotBase.isReal() ? Mode.REAL : Mode.SIM;
   /**
    * Used to publish extra outputs, use test bindings, etc.
    *
    * <p>Should be disabled when in competition.
    */
-  public static final boolean debuggingModeEnabled = true;
+  public static final boolean DEBUGGING_MODE_ENABLED = true;
 
   public static enum Mode {
     /** Running on a real robot. */
