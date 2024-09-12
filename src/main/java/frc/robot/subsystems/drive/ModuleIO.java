@@ -4,9 +4,8 @@
 
 package frc.robot.subsystems.drive;
 
-import org.littletonrobotics.junction.AutoLog;
-
 import edu.wpi.first.math.geometry.Rotation2d;
+import org.littletonrobotics.junction.AutoLog;
 
 /** Hardware abstraction interface for a swerve module */
 public interface ModuleIO {
@@ -28,4 +27,37 @@ public interface ModuleIO {
     public double azimuthAppliedVolts = 0.0;
     public double[] azimuthCurrentAmps = new double[] {};
   }
+
+  /** Updates the set of loggable inputs. */
+  public default void updateInputs(ModuleIOInputs inputs) {}
+
+  /** Run the drive motor at the specified voltage. */
+  public default void setDriveVoltage(double volts) {}
+
+  /** Run the azimuth motor at the specified voltage. */
+  public default void setAzimuthVoltage(double volts) {}
+
+  /** Run characterization input (amps or volts) into drive motor */
+  public default void runCharacterization(double input) {}
+
+  /** Run drive to velocity setpoint with feedforward */
+  public default void runDriveVelocitySetpoint(double velocityRadPerSec, double feedforward) {}
+
+  /** Run to azimuth setpoint */
+  public default void runAzimuthPositionSetpoint(Rotation2d setpoint) {}
+
+  /** Set the on-board PID gains for the motor */
+  public default void setDriveFeedbackGains(double p, double i, double d) {}
+
+  /** Set the on-board PID gains for the motor */
+  public default void setAzimuthFeedbackGains(double p, double i, double d) {}
+
+  /** Enable or disable brake mode on the drive motor. */
+  public default void setDriveBrakeMode(boolean enable) {}
+
+  /** Enable or disable brake mode on the azimuth motor. */
+  public default void setAzimuthBrakeMode(boolean enable) {}
+
+  /** Set motor to cease motion */
+  public default void stop() {}
 }
