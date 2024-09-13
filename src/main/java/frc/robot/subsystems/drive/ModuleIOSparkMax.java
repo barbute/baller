@@ -37,7 +37,10 @@ public class ModuleIOSparkMax implements ModuleIO {
 
     INVERT_AZIMUTH_MOTOR = configuration.INVERT_AZIMUTH_MOTOR();
 
-    // Clear current settings of the motors, we want to control everything in code
+    applyConfigurations(configuration);
+  }
+
+  private void applyConfigurations(ModuleConfiguration configuration) {
     DRIVE_MOTOR.restoreFactoryDefaults();
     AZIMUTH_MOTOR.restoreFactoryDefaults();
 
