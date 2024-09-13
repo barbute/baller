@@ -4,12 +4,17 @@
 
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.revrobotics.CANSparkBase.IdleMode;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.REVLibError;
 import com.revrobotics.RelativeEncoder;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.DriveConstants.ModuleConfiguration;
 
 /** Virtual implementation of a swerve module with two SparkMax controllers and a CANCoder */
@@ -22,6 +27,10 @@ public class ModuleIOSparkMax implements ModuleIO {
   private final CANcoder CANCODER;
 
   private final boolean INVERT_AZIMUTH_MOTOR;
+  private final double DRIVE_MOTOR_GEAR_RATIO;
+  private final double AZIMUTH_MOTOR_GEAR_RATIO;
+
+  private final StatusSignal<Double> ABSOLUTE_ENCODER_POSITION;
 
   public ModuleIOSparkMax(ModuleConfiguration configuration) {
     DRIVE_MOTOR = new CANSparkMax(configuration.DRIVE_MOTOR_ID(), MotorType.kBrushless);
@@ -36,8 +45,13 @@ public class ModuleIOSparkMax implements ModuleIO {
     }
 
     INVERT_AZIMUTH_MOTOR = configuration.INVERT_AZIMUTH_MOTOR();
+    DRIVE_MOTOR_GEAR_RATIO = configuration.DRIVE_MOTOR_GEAR_RATIO();
+    AZIMUTH_MOTOR_GEAR_RATIO = configuration.AZIMUTH_MOTOR_GEAR_RATIO();
 
     applyConfigurations(configuration);
+
+    ABSOLUTE_ENCODER_POSITION = CANCODER.getAbsolutePosition();
+    BaseStatusSignal.setUpdateFrequencyForAll(50.0, ABSOLUTE_ENCODER_POSITION);
   }
 
   private void applyConfigurations(ModuleConfiguration configuration) {
@@ -77,5 +91,30 @@ public class ModuleIOSparkMax implements ModuleIO {
     AZIMUTH_MOTOR.burnFlash();
 
     CANCODER.getConfigurator().apply(new CANcoderConfiguration());
+  }
+
+  @Override
+  public void updateInputs(ModuleIOInputs inputs) {
+    inputs.driveMotorConnected = DRIVE_MOTOR.getLastError().equals(REVLibError.kOk);
+    inputs.azimuthMotorConnected = AZIMUTH_MOTOR.getLastError().equals(REVLibError.kOk);
+    inputs.absoluteEncoderConnected = BaseStatusSignal.refreshAll(ABSOLUTE_ENCODER_POSITION).isOK();
+
+    inputs.drivePositionRad =
+        Units.rotationsToRadians(DRIVE_ENCODER.getPosition() / DRIVE_MOTOR_GEAR_RATIO);
+    inputs.driveVelocityRadPerSec =
+        Units.rotationsPerMinuteToRadiansPerSecond(
+            DRIVE_ENCODER.getVelocity() / DRIVE_MOTOR_GEAR_RATIO);
+    inputs.driveAppliedVolts = DRIVE_MOTOR.getAppliedOutput() * DRIVE_MOTOR.getBusVoltage();
+    inputs.driveCurrentAmps = new double[] {DRIVE_MOTOR.getOutputCurrent()};
+
+    inputs.azimuthAbsolutePosition =
+        Rotation2d.fromRotations(ABSOLUTE_ENCODER_POSITION.getValueAsDouble());
+    inputs.azimuthPosition =
+        Rotation2d.fromRotations(AZIMUTH_ENCODER.getPosition() / AZIMUTH_MOTOR_GEAR_RATIO);
+    inputs.azimuthVelocityRadPerSec =
+        Units.rotationsPerMinuteToRadiansPerSecond(
+            AZIMUTH_ENCODER.getVelocity() / AZIMUTH_MOTOR_GEAR_RATIO);
+    inputs.azimuthAppliedVolts = AZIMUTH_MOTOR.getAppliedOutput() * AZIMUTH_MOTOR.getBusVoltage();
+    inputs.azimuthCurrentAmps = new double[] {AZIMUTH_MOTOR.getOutputCurrent()};
   }
 }

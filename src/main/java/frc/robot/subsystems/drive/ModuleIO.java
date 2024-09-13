@@ -13,7 +13,7 @@ public interface ModuleIO {
   @AutoLog
   public static class ModuleIOInputs {
     public boolean driveMotorConnected = true;
-    public boolean azimuthMotorConntected = true;
+    public boolean azimuthMotorConnected = true;
     public boolean absoluteEncoderConnected = true;
 
     public double drivePositionRad = 0.0;
