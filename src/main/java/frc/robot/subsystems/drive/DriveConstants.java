@@ -27,9 +27,22 @@ public class DriveConstants {
       int AZIMUTH_MOTOR_ID,
       int ABSOLUTE_ENCODER_ID,
       Rotation2d ABSOLUTE_ENCODER_OFFSET,
+      boolean INVERT_DRIVE_MOTOR,
       boolean INVERT_AZIMUTH_MOTOR,
       double DRIVE_MOTOR_GEAR_RATIO,
       double AZIMUTH_MOTOR_GEAR_RATIO) {}
+
+  public record SparkMaxModuleConfiguration(
+      int DRIVE_CAN_TIMEOUT_MS,
+      int AZIMUTH_CAN_TIMEOUT_MS,
+      int DRIVE_SMART_CURRENT_LIMIT_AMP,
+      int AZIMUTH_SMART_CURRENT_LIMIT_AMP,
+      int DRIVE_SECONDARY_CURRENT_LIMIT_AMP,
+      int AZIMUTH_SECONDARY_CURRENT_LIMIT_AMP,
+      double NOMINAL_VOLTAGE,
+      int DRIVE_ENCODER_MEASUREMENT_PERIOD_MS,
+      int AZIMUTH_ENCODER_MEASUREMENT_PERIOD_MS,
+      int CAN_TIMEOUT_MS) {}
 
   public record ModuleGains(
       double DRIVE_S,
@@ -59,21 +72,28 @@ public class DriveConstants {
         default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       };
 
+  public static final SparkMaxModuleConfiguration SPARK_CONFIGURATIONS =
+      new SparkMaxModuleConfiguration(250, 250, 60, 40, 80, 100, 12.0, 20, 10, 0);
+
   public static final ModuleConfiguration[] MODULE_CONFIGURATIONS =
       switch (Constants.CURRENT_MODE) {
           // Drive motor ID, Azimuth motor ID, Absolute encoder ID, Absolute encoder offset, Invert
           // azimuth, Drive gearing, Azimuth gearing
         case REAL -> new ModuleConfiguration[] {
-          new ModuleConfiguration(11, 21, 31, Rotation2d.fromRotations(0.0), true, 6.746, 21.429),
-          new ModuleConfiguration(12, 22, 32, Rotation2d.fromRotations(0.0), true, 6.746, 21.429),
-          new ModuleConfiguration(13, 23, 33, Rotation2d.fromRotations(0.0), true, 6.746, 21.429),
-          new ModuleConfiguration(14, 24, 34, Rotation2d.fromRotations(0.0), true, 6.746, 21.429)
+          new ModuleConfiguration(
+              11, 21, 31, Rotation2d.fromRadians(-1.738), false, true, 6.75 / 1.0, 150.0 / 7.0),
+          new ModuleConfiguration(
+              12, 22, 32, Rotation2d.fromRadians(-1.705), false, true, 6.75 / 1.0, 150.0 / 7.0),
+          new ModuleConfiguration(
+              13, 23, 33, Rotation2d.fromRadians(-2.538), false, true, 6.75 / 1.0, 150.0 / 7.0),
+          new ModuleConfiguration(
+              14, 24, 34, Rotation2d.fromRadians(2.431), false, true, 6.75 / 1.0, 150.0 / 7.0)
         };
         default -> {
           ModuleConfiguration[] configurations = new ModuleConfiguration[4];
           for (int i = 0; i < 4; i++) {
             configurations[i] =
-                new ModuleConfiguration(0, 0, 0, new Rotation2d(), false, 6.746, 21.429);
+                new ModuleConfiguration(0, 0, 0, new Rotation2d(), false, false, 6.746, 21.429);
           }
           yield configurations; // "Return" configurations statement but for arrow function, more
           // complex explanation but am too lazy rn
