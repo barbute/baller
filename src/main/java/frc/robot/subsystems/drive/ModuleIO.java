@@ -37,21 +37,6 @@ public interface ModuleIO {
   /** Run the azimuth motor at the specified voltage. */
   public default void setAzimuthVoltage(double volts) {}
 
-  /** Run characterization input (amps or volts) into drive motor */
-  public default void runCharacterization(double input) {}
-
-  /** Run drive to velocity setpoint with feedforward */
-  public default void runDriveVelocitySetpoint(double velocityRadPerSec, double feedforward) {}
-
-  /** Run to azimuth setpoint */
-  public default void runAzimuthPositionSetpoint(Rotation2d setpoint) {}
-
-  /** Set the on-board PID gains for the motor */
-  public default void setDriveFeedbackGains(double p, double i, double d) {}
-
-  /** Set the on-board PID gains for the motor */
-  public default void setAzimuthFeedbackGains(double p, double i, double d) {}
-
   /** Enable or disable brake mode on the drive motor. */
   public default void setDriveBrakeMode(boolean enable) {}
 

@@ -16,6 +16,7 @@ import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.DriveConstants.ModuleConfiguration;
+import frc.robot.subsystems.drive.DriveConstants.ModuleGains;
 
 /** Virtual implementation of a swerve module with two SparkMax controllers and a CANCoder */
 public class ModuleIOSparkMax implements ModuleIO {
@@ -30,9 +31,10 @@ public class ModuleIOSparkMax implements ModuleIO {
   private final double DRIVE_MOTOR_GEAR_RATIO;
   private final double AZIMUTH_MOTOR_GEAR_RATIO;
 
+  private final Rotation2d ABSOLUTE_ENCODER_OFFSET;
   private final StatusSignal<Double> ABSOLUTE_ENCODER_POSITION;
 
-  public ModuleIOSparkMax(ModuleConfiguration configuration) {
+  public ModuleIOSparkMax(ModuleConfiguration configuration, ModuleGains gains) {
     DRIVE_MOTOR = new CANSparkMax(configuration.DRIVE_MOTOR_ID(), MotorType.kBrushless);
     AZIMUTH_MOTOR = new CANSparkMax(configuration.AZIMUTH_MOTOR_ID(), MotorType.kBrushless);
 
@@ -48,13 +50,14 @@ public class ModuleIOSparkMax implements ModuleIO {
     DRIVE_MOTOR_GEAR_RATIO = configuration.DRIVE_MOTOR_GEAR_RATIO();
     AZIMUTH_MOTOR_GEAR_RATIO = configuration.AZIMUTH_MOTOR_GEAR_RATIO();
 
-    applyConfigurations(configuration);
+    applyConfigurations(configuration, gains);
 
+    ABSOLUTE_ENCODER_OFFSET = configuration.ABSOLUTE_ENCODER_OFFSET();
     ABSOLUTE_ENCODER_POSITION = CANCODER.getAbsolutePosition();
     BaseStatusSignal.setUpdateFrequencyForAll(50.0, ABSOLUTE_ENCODER_POSITION);
   }
 
-  private void applyConfigurations(ModuleConfiguration configuration) {
+  private void applyConfigurations(ModuleConfiguration configuration, ModuleGains gains) {
     DRIVE_MOTOR.restoreFactoryDefaults();
     AZIMUTH_MOTOR.restoreFactoryDefaults();
 
@@ -68,6 +71,10 @@ public class ModuleIOSparkMax implements ModuleIO {
         DriveConstants.SPARK_CONFIGURATIONS.DRIVE_SMART_CURRENT_LIMIT_AMP());
     AZIMUTH_MOTOR.setSmartCurrentLimit(
         DriveConstants.SPARK_CONFIGURATIONS.AZIMUTH_SMART_CURRENT_LIMIT_AMP());
+    DRIVE_MOTOR.setSecondaryCurrentLimit(
+        DriveConstants.SPARK_CONFIGURATIONS.DRIVE_SECONDARY_CURRENT_LIMIT_AMP());
+    AZIMUTH_MOTOR.setSecondaryCurrentLimit(
+        DriveConstants.SPARK_CONFIGURATIONS.AZIMUTH_SECONDARY_CURRENT_LIMIT_AMP());
     DRIVE_MOTOR.enableVoltageCompensation(DriveConstants.SPARK_CONFIGURATIONS.NOMINAL_VOLTAGE());
     AZIMUTH_MOTOR.enableVoltageCompensation(DriveConstants.SPARK_CONFIGURATIONS.NOMINAL_VOLTAGE());
 
@@ -81,8 +88,8 @@ public class ModuleIOSparkMax implements ModuleIO {
         DriveConstants.SPARK_CONFIGURATIONS.AZIMUTH_ENCODER_MEASUREMENT_PERIOD_MS());
     AZIMUTH_ENCODER.setAverageDepth(2);
 
-    DRIVE_MOTOR.setIdleMode(IdleMode.kBrake);
-    AZIMUTH_MOTOR.setIdleMode(IdleMode.kCoast);
+    setDriveBrakeMode(true);
+    setAzimuthBrakeMode(false);
 
     DRIVE_MOTOR.setCANTimeout(0);
     AZIMUTH_MOTOR.setCANTimeout(0);
@@ -108,7 +115,8 @@ public class ModuleIOSparkMax implements ModuleIO {
     inputs.driveCurrentAmps = new double[] {DRIVE_MOTOR.getOutputCurrent()};
 
     inputs.azimuthAbsolutePosition =
-        Rotation2d.fromRotations(ABSOLUTE_ENCODER_POSITION.getValueAsDouble());
+        Rotation2d.fromRotations(ABSOLUTE_ENCODER_POSITION.getValueAsDouble())
+            .minus(ABSOLUTE_ENCODER_OFFSET);
     inputs.azimuthPosition =
         Rotation2d.fromRotations(AZIMUTH_ENCODER.getPosition() / AZIMUTH_MOTOR_GEAR_RATIO);
     inputs.azimuthVelocityRadPerSec =
@@ -116,5 +124,31 @@ public class ModuleIOSparkMax implements ModuleIO {
             AZIMUTH_ENCODER.getVelocity() / AZIMUTH_MOTOR_GEAR_RATIO);
     inputs.azimuthAppliedVolts = AZIMUTH_MOTOR.getAppliedOutput() * AZIMUTH_MOTOR.getBusVoltage();
     inputs.azimuthCurrentAmps = new double[] {AZIMUTH_MOTOR.getOutputCurrent()};
+  }
+
+  @Override
+  public void setDriveVoltage(double volts) {
+    DRIVE_MOTOR.setVoltage(volts);
+  }
+
+  @Override
+  public void setAzimuthVoltage(double volts) {
+    AZIMUTH_MOTOR.setVoltage(volts);
+  }
+
+  @Override
+  public void setDriveBrakeMode(boolean enable) {
+    DRIVE_MOTOR.setIdleMode((enable) ? IdleMode.kBrake : IdleMode.kCoast);
+  }
+
+  @Override
+  public void setAzimuthBrakeMode(boolean enable) {
+    AZIMUTH_MOTOR.setIdleMode((enable) ? IdleMode.kBrake : IdleMode.kCoast);
+  }
+
+  @Override
+  public void stop() {
+    DRIVE_MOTOR.stopMotor();
+    AZIMUTH_MOTOR.stopMotor();
   }
 }

@@ -37,6 +37,8 @@ public class DriveConstants {
       int AZIMUTH_CAN_TIMEOUT_MS,
       int DRIVE_SMART_CURRENT_LIMIT_AMP,
       int AZIMUTH_SMART_CURRENT_LIMIT_AMP,
+      int DRIVE_SECONDARY_CURRENT_LIMIT_AMP,
+      int AZIMUTH_SECONDARY_CURRENT_LIMIT_AMP,
       double NOMINAL_VOLTAGE,
       int DRIVE_ENCODER_MEASUREMENT_PERIOD_MS,
       int AZIMUTH_ENCODER_MEASUREMENT_PERIOD_MS,
@@ -71,7 +73,7 @@ public class DriveConstants {
       };
 
   public static final SparkMaxModuleConfiguration SPARK_CONFIGURATIONS =
-      new SparkMaxModuleConfiguration(250, 250, 40, 30, 12.0, 10, 10, 0);
+      new SparkMaxModuleConfiguration(250, 250, 60, 40, 80, 100, 12.0, 20, 10, 0);
 
   public static final ModuleConfiguration[] MODULE_CONFIGURATIONS =
       switch (Constants.CURRENT_MODE) {
