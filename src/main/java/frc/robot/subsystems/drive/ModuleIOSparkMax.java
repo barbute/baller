@@ -16,9 +16,8 @@ import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.DriveConstants.ModuleConfiguration;
-import frc.robot.subsystems.drive.DriveConstants.ModuleGains;
 
-/** Virtual implementation of a swerve module with two SparkMax controllers and a CANCoder */
+/** Hardware implementation of a swerve module with two SparkMax controllers and a CANCoder */
 public class ModuleIOSparkMax implements ModuleIO {
   private final CANSparkMax DRIVE_MOTOR;
   private final CANSparkMax AZIMUTH_MOTOR;
@@ -34,7 +33,7 @@ public class ModuleIOSparkMax implements ModuleIO {
   private final Rotation2d ABSOLUTE_ENCODER_OFFSET;
   private final StatusSignal<Double> ABSOLUTE_ENCODER_POSITION;
 
-  public ModuleIOSparkMax(ModuleConfiguration configuration, ModuleGains gains) {
+  public ModuleIOSparkMax(ModuleConfiguration configuration) {
     DRIVE_MOTOR = new CANSparkMax(configuration.DRIVE_MOTOR_ID(), MotorType.kBrushless);
     AZIMUTH_MOTOR = new CANSparkMax(configuration.AZIMUTH_MOTOR_ID(), MotorType.kBrushless);
 
@@ -50,14 +49,14 @@ public class ModuleIOSparkMax implements ModuleIO {
     DRIVE_MOTOR_GEAR_RATIO = configuration.DRIVE_MOTOR_GEAR_RATIO();
     AZIMUTH_MOTOR_GEAR_RATIO = configuration.AZIMUTH_MOTOR_GEAR_RATIO();
 
-    applyConfigurations(configuration, gains);
+    applyConfigurations(configuration);
 
     ABSOLUTE_ENCODER_OFFSET = configuration.ABSOLUTE_ENCODER_OFFSET();
     ABSOLUTE_ENCODER_POSITION = CANCODER.getAbsolutePosition();
     BaseStatusSignal.setUpdateFrequencyForAll(50.0, ABSOLUTE_ENCODER_POSITION);
   }
 
-  private void applyConfigurations(ModuleConfiguration configuration, ModuleGains gains) {
+  private void applyConfigurations(ModuleConfiguration configuration) {
     DRIVE_MOTOR.restoreFactoryDefaults();
     AZIMUTH_MOTOR.restoreFactoryDefaults();
 
