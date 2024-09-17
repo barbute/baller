@@ -22,7 +22,7 @@ public class Module {
   private final SimpleMotorFeedforward DRIVE_FEEDFORWARD;
   private final PIDController DRIVE_FEEDBACK;
   private final PIDController AZIMUTH_FEEDBACK;
-  private Double driveSetpoint = null;
+  private Double driveSetpointMeterPerSec = null;
   private Rotation2d azimuthSetpoint = null;
 
   private Rotation2d azimuthRelativeOffset = null; // Relative + Offset = Absolute
@@ -86,14 +86,14 @@ public class Module {
 
       // Run closed loop drive control
       // Only allowed if closed loop azimuth control is running
-      if (driveSetpoint != null) {
+      if (driveSetpointMeterPerSec != null) {
         // Scale velocity based on turn error
         //
         // When the error is 90°, the velocity setpoint should be 0. As the wheel turns
         // towards the setpoint, its velocity should increase. This is achieved by
         // taking the component of the velocity in the direction of the setpoint.
         double adjustedDriveSetpoint =
-            driveSetpoint * Math.cos(AZIMUTH_FEEDBACK.getPositionError());
+            driveSetpointMeterPerSec * Math.cos(AZIMUTH_FEEDBACK.getPositionError());
         double velocitySetpointRadPerSec =
             adjustedDriveSetpoint / DriveConstants.DRIVE_CONFIGURATION.WHEEL_RADIUS_METER();
 
@@ -132,6 +132,24 @@ public class Module {
           azimuthFeedbackI,
           azimuthFeedbackD);
     }
+  }
+
+  /**
+   * Runs the module with the specified setpoint state
+   * 
+   * @param desiredState The specified setpoint state of the module
+   * @return The optimized state
+   */
+  public SwerveModuleState runModuleState(SwerveModuleState desiredState) {
+    // Optimize state based on current angle
+    // Controllers run in "periodic" when the setpoint is not null
+    var optimizedState = SwerveModuleState.optimize(desiredState, getAngle());
+
+    // Update setpoints, controllers run in "periodic"
+    azimuthSetpoint = optimizedState.angle;
+    driveSetpointMeterPerSec = optimizedState.speedMetersPerSecond;
+
+    return optimizedState;
   }
 
   /** Set the drive motor's feedback gains */
