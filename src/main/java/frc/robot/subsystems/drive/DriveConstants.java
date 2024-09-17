@@ -103,7 +103,7 @@ public class DriveConstants {
   public static final ModuleGains MODULE_GAINS =
       // Drive: S, V, A, P, I, D | Azimuth: P, I, D
       switch (Constants.CURRENT_MODE) {
-        case REAL -> new ModuleGains(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        case REAL -> new ModuleGains(0.14287, 0.13772, 0.012954, 0.1, 0.0, 0.0, 8.0, 0.0, 0.0);
         case SIM -> new ModuleGains(0.0, 2.06 / 15.32, 0.0, 0.1, 0.0, 0.0, 5.0, 0.0, 0.0);
         default -> new ModuleGains(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       };
