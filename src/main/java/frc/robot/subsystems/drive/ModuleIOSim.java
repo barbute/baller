@@ -36,6 +36,9 @@ public class ModuleIOSim implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
+    DRIVE_MOTOR.update(LOOP_PERIOD_SEC);
+    AZIMUTH_MOTOR.update(LOOP_PERIOD_SEC);
+
     inputs.driveMotorConnected = true;
     inputs.azimuthMotorConnected = true;
     inputs.absoluteEncoderConnected = true;
