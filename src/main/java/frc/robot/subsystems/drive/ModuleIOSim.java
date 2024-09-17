@@ -17,8 +17,12 @@ public class ModuleIOSim implements ModuleIO {
   private final DCMotorSim DRIVE_MOTOR;
   private final DCMotorSim AZIMUTH_MOTOR;
 
-  /** "faking" the initial position of an absolute encoder to simulate that aspect of the azimuth position */
-  private final Rotation2d ABSOLUTE_INITIAL_POSITION = new Rotation2d(Math.random() * 2.0 * Math.PI);
+  /**
+   * "faking" the initial position of an absolute encoder to simulate that aspect of the azimuth
+   * position
+   */
+  private final Rotation2d ABSOLUTE_INITIAL_POSITION =
+      new Rotation2d(Math.random() * 2.0 * Math.PI);
 
   private double driveAppliedVolts = 0.0;
   private double azimuthAppliedVolts = 0.0;
@@ -31,6 +35,21 @@ public class ModuleIOSim implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
-    
+    inputs.driveMotorConnected = true;
+    inputs.azimuthMotorConnected = true;
+    inputs.absoluteEncoderConnected = true;
+
+    inputs.drivePositionRad = DRIVE_MOTOR.getAngularPositionRad();
+    inputs.driveVelocityRadPerSec = DRIVE_MOTOR.getAngularVelocityRadPerSec();
+    inputs.driveAppliedVolts = driveAppliedVolts;
+    inputs.driveCurrentAmps = new double[] {0.0};
+
+    inputs.azimuthAbsolutePosition =
+        Rotation2d.fromRadians(AZIMUTH_MOTOR.getAngularPositionRad())
+            .plus(ABSOLUTE_INITIAL_POSITION);
+    inputs.azimuthPosition = Rotation2d.fromRadians(AZIMUTH_MOTOR.getAngularPositionRad());
+    inputs.azimuthVelocityRadPerSec = AZIMUTH_MOTOR.getAngularVelocityRadPerSec();
+    inputs.azimuthAppliedVolts = azimuthAppliedVolts;
+    inputs.azimuthCurrentAmps = new double[] {0.0};
   }
 }
