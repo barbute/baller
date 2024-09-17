@@ -112,6 +112,36 @@ public class Module {
         }
       }
     }
+
+    // Update feedback controller gains
+    if (Constants.DEBUGGING_MODE_ENABLED) {
+      LoggedTunableNumber.ifChanged(
+          hashCode(),
+          () ->
+              setDriveFeedbackGains(
+                  driveFeedbackP.get(), driveFeedbackI.get(), driveFeedbackD.get()),
+          driveFeedbackP,
+          driveFeedbackI,
+          driveFeedbackD);
+      LoggedTunableNumber.ifChanged(
+          hashCode(),
+          () ->
+              setAzimuthFeedbackGains(
+                  azimuthFeedbackP.get(), azimuthFeedbackI.get(), azimuthFeedbackD.get()),
+          azimuthFeedbackP,
+          azimuthFeedbackI,
+          azimuthFeedbackD);
+    }
+  }
+
+  /** Set the drive motor's feedback gains */
+  private void setDriveFeedbackGains(double P, double I, double D) {
+    DRIVE_FEEDBACK.setPID(P, I, D);
+  }
+
+  /** Set the azimuth motor's feedback gains */
+  private void setAzimuthFeedbackGains(double P, double I, double D) {
+    AZIMUTH_FEEDBACK.setPID(P, I, D);
   }
 
   /** Returns the current turn angle of the module. */
