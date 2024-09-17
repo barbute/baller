@@ -64,7 +64,7 @@ public class Module {
     azimuthFeedbackD = new LoggedTunableNumber("Drive/Tuning/AzimuthD", AZIMUTH_FEEDBACK.getD());
 
     AZIMUTH_FEEDBACK.enableContinuousInput(-Math.PI, Math.PI);
-    // TODO Set brake mode here
+    setBrakeMode(true, true);
   }
 
   /** Called in the drive subsystem's periodic loop */
@@ -136,7 +136,7 @@ public class Module {
 
   /**
    * Runs the module with the specified setpoint state
-   * 
+   *
    * @param desiredState The specified setpoint state of the module
    * @return The optimized state
    */
@@ -150,6 +150,32 @@ public class Module {
     driveSetpointMeterPerSec = optimizedState.speedMetersPerSecond;
 
     return optimizedState;
+  }
+
+  /** Runs the module with the specified voltage while controlling to zero degrees. */
+  public void runCharacterization(double volts) {
+    // Closed loop turn control
+    azimuthSetpoint = new Rotation2d();
+
+    // Open loop drive control
+    IO.setDriveVoltage(volts);
+    driveSetpointMeterPerSec = null;
+  }
+
+  /** Disables all outputs to motors. */
+  public void stop() {
+    IO.setAzimuthVoltage(0.0);
+    IO.setDriveVoltage(0.0);
+
+    // Disable closed loop control for turn and drive
+    azimuthSetpoint = null;
+    driveSetpointMeterPerSec = null;
+  }
+
+  /** Sets whether brake mode is enabled. */
+  public void setBrakeMode(boolean enableDrive, boolean enableAzimuth) {
+    IO.setDriveBrakeMode(enableDrive);
+    IO.setAzimuthBrakeMode(enableAzimuth);
   }
 
   /** Set the drive motor's feedback gains */
