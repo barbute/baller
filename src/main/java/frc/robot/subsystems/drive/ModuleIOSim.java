@@ -4,6 +4,7 @@
 
 package frc.robot.subsystems.drive;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -51,5 +52,17 @@ public class ModuleIOSim implements ModuleIO {
     inputs.azimuthVelocityRadPerSec = AZIMUTH_MOTOR.getAngularVelocityRadPerSec();
     inputs.azimuthAppliedVolts = azimuthAppliedVolts;
     inputs.azimuthCurrentAmps = new double[] {0.0};
+  }
+
+  @Override
+  public void setDriveVoltage(double volts) {
+    driveAppliedVolts = MathUtil.clamp(volts, -12.0, 12.0);
+    DRIVE_MOTOR.setInputVoltage(driveAppliedVolts);
+  }
+
+  @Override
+  public void setAzimuthVoltage(double volts) {
+    azimuthAppliedVolts = MathUtil.clamp(volts, -12.0, 12.0);
+    AZIMUTH_MOTOR.setInputVoltage(azimuthAppliedVolts);
   }
 }
