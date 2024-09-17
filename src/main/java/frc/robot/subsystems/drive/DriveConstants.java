@@ -62,7 +62,7 @@ public class DriveConstants {
       switch (Constants.CURRENT_MODE) {
         case REAL, SIM -> new DriveConfiguration(
             10, // Gyro ID
-            Units.inchesToMeters(2.0), // Wheel radius
+            5.08 / 100.0, // Wheel radius TODO Check this bruh
             Units.inchesToMeters(24.25), // Track width X
             Units.inchesToMeters(24.25), // Track width Y
             Units.feetToMeters(14.5), // Max linear velocity M/S
