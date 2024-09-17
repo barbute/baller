@@ -7,6 +7,8 @@ package frc.robot.subsystems.drive;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.util.debugging.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -74,5 +76,39 @@ public class Module {
     if (azimuthRelativeOffset == null && INPUTS.azimuthAbsolutePosition.getRadians() != 0.0) {
       azimuthRelativeOffset = INPUTS.azimuthAbsolutePosition.minus(INPUTS.azimuthPosition);
     }
+  }
+
+  /** Returns the current turn angle of the module. */
+  public Rotation2d getAngle() {
+    if (azimuthRelativeOffset == null) {
+      return new Rotation2d();
+    } else {
+      return INPUTS.azimuthPosition.plus(azimuthRelativeOffset);
+    }
+  }
+
+  /** Returns the current drive position of the module in meters. */
+  public double getPositionMeters() {
+    return INPUTS.drivePositionRad * DriveConstants.DRIVE_CONFIGURATION.WHEEL_RADIUS_METER();
+  }
+
+  /** Returns the current drive velocity of the module in meters per second. */
+  public double getVelocityMetersPerSec() {
+    return INPUTS.driveVelocityRadPerSec * DriveConstants.DRIVE_CONFIGURATION.WHEEL_RADIUS_METER();
+  }
+
+  /** Returns the module position (turn angle and drive position). */
+  public SwerveModulePosition getPosition() {
+    return new SwerveModulePosition(getPositionMeters(), getAngle());
+  }
+
+  /** Returns the module state (turn angle and drive velocity). */
+  public SwerveModuleState getState() {
+    return new SwerveModuleState(getVelocityMetersPerSec(), getAngle());
+  }
+
+  /** Returns the drive velocity in radians/sec. */
+  public double getCharacterizationVelocity() {
+    return INPUTS.driveVelocityRadPerSec;
   }
 }
