@@ -9,6 +9,7 @@ import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import frc.robot.Constants;
 import frc.robot.util.debugging.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -21,7 +22,7 @@ public class Module {
   private final SimpleMotorFeedforward DRIVE_FEEDFORWARD;
   private final PIDController DRIVE_FEEDBACK;
   private final PIDController AZIMUTH_FEEDBACK;
-  private Double driveSetpointRadPerSec = null;
+  private Double driveSetpoint = null;
   private Rotation2d azimuthSetpoint = null;
 
   private Rotation2d azimuthRelativeOffset = null; // Relative + Offset = Absolute
@@ -75,6 +76,41 @@ public class Module {
     // Wait until absolute angle is nonzero in case it wasn't initialized yet
     if (azimuthRelativeOffset == null && INPUTS.azimuthAbsolutePosition.getRadians() != 0.0) {
       azimuthRelativeOffset = INPUTS.azimuthAbsolutePosition.minus(INPUTS.azimuthPosition);
+    }
+
+    // Run closed loop azimuth control
+    if (azimuthSetpoint != null) {
+      double azimuthFeedbackOutput =
+          AZIMUTH_FEEDBACK.calculate(getAngle().getRadians(), azimuthSetpoint.getRadians());
+      IO.setAzimuthVoltage(azimuthFeedbackOutput);
+
+      // Run closed loop drive control
+      // Only allowed if closed loop azimuth control is running
+      if (driveSetpoint != null) {
+        // Scale velocity based on turn error
+        //
+        // When the error is 90°, the velocity setpoint should be 0. As the wheel turns
+        // towards the setpoint, its velocity should increase. This is achieved by
+        // taking the component of the velocity in the direction of the setpoint.
+        double adjustedDriveSetpoint =
+            driveSetpoint * Math.cos(AZIMUTH_FEEDBACK.getPositionError());
+        double velocitySetpointRadPerSec =
+            adjustedDriveSetpoint / DriveConstants.DRIVE_CONFIGURATION.WHEEL_RADIUS_METER();
+
+        double driveFeedforwardOutput = DRIVE_FEEDFORWARD.calculate(velocitySetpointRadPerSec);
+        double driveFeedbackOutput =
+            DRIVE_FEEDBACK.calculate(INPUTS.driveVelocityRadPerSec, velocitySetpointRadPerSec);
+
+        IO.setDriveVoltage(driveFeedforwardOutput + driveFeedbackOutput);
+
+        if (Constants.DEBUGGING_MODE_ENABLED) {
+          Logger.recordOutput("Drive/Module/VelocitySetpointRadPerSec", velocitySetpointRadPerSec);
+          Logger.recordOutput("Drive/Module/FeedbackOutput", driveFeedbackOutput);
+          Logger.recordOutput("Drive/Module/FeedforwardOutput", driveFeedforwardOutput);
+          Logger.recordOutput("Drive/Module/FeedbackError", DRIVE_FEEDBACK.getPositionError());
+          Logger.recordOutput("Drive/Module/FeedbackSetpoint", DRIVE_FEEDBACK.getSetpoint());
+        }
+      }
     }
   }
 
