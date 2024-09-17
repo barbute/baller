@@ -4,12 +4,11 @@
 
 package frc.robot.subsystems.drive;
 
-import org.littletonrobotics.junction.Logger;
-
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.util.debugging.LoggedTunableNumber;
+import org.littletonrobotics.junction.Logger;
 
 /** A swerve module */
 public class Module {
@@ -69,5 +68,11 @@ public class Module {
   public void periodic() {
     IO.updateInputs(INPUTS);
     Logger.processInputs("Drive/Module" + Integer.toString(INDEX), INPUTS);
+
+    // On first cycle, reset relative azimuth encoder
+    // Wait until absolute angle is nonzero in case it wasn't initialized yet
+    if (azimuthRelativeOffset == null && INPUTS.azimuthAbsolutePosition.getRadians() != 0.0) {
+      azimuthRelativeOffset = INPUTS.azimuthAbsolutePosition.minus(INPUTS.azimuthPosition);
+    }
   }
 }
