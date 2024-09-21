@@ -67,6 +67,7 @@ public class DriveConstants {
             Units.inchesToMeters(24.25), // Track width Y
             Units.feetToMeters(14.5), // Max linear velocity M/S
             Units.feetToMeters(50.0), // Max linear acceleration M/S^2
+            // TODO Check this too bruh
             12.0, // Max angular velocity Rad/S
             6.0); // Max angular acceleration Rad/s^2
         default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);

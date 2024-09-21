@@ -8,12 +8,28 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Subsystem representing a swerve drive, configurable in DriveConstants.java */
 public class Drive extends SubsystemBase {
+  /** All possible states the drive subsystem can be in */
+  public enum DriveState {
+    /** Driving with input from driver controllers */
+    TELEOPERATED,
+    /** Driving based on a preplanned trajectory */
+    TRAJECTORY,
+    /** Driving to a location on a field automatically */
+    AUTOALIGN,
+    /** Characterizing */
+    CHARACTERIZATION,
+    /** Only runs drive volts, kV = voltage / velocity; sets the drive volts to 1.0 */
+    SIMPLECHARACTERIZATION,
+    /** Drivetrain is commanded to do nothing */
+    STOPPED
+  }
 
   /** Organized as FL, FR, BL, BR */
   private final Module[] MODULES = new Module[4];
@@ -44,6 +60,17 @@ public class Drive extends SubsystemBase {
   private LinearFilter xPositionFilter = LinearFilter.movingAverage(5);
   /** Used to filter y-pose data from the pose estimator as vision estimates can be a bit shakey */
   private LinearFilter yPositionFilter = LinearFilter.movingAverage(5);
+
+  // TODO Check if limits are correct with drivetrain model
+  private final ModuleLimits MODULE_LIMITS =
+      new ModuleLimits(
+          DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC(),
+          DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC() * 5.0,
+          DriveConstants.DRIVE_CONFIGURATION.MAX_ANGULAR_VELOCITY_RAD_PER_SEC());
+  private final SwerveSetpointGenerator SETPOINT_GENERATOR =
+      new SwerveSetpointGenerator(DriveConstants.KINEMATICS, DriveConstants.MODULE_TRANSLATIONS);
+  private ChassisSpeeds desiredSpeeds = new ChassisSpeeds();
+  private DriveState desiredDriveState = DriveState.STOPPED;
 
   public Drive(
       ModuleIO flModuleIO,
