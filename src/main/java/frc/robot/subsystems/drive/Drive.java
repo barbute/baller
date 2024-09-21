@@ -11,7 +11,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.littletonrobotics.junction.Logger;
 
 /** Subsystem representing a swerve drive, configurable in DriveConstants.java */
 public class Drive extends SubsystemBase {
@@ -67,7 +70,7 @@ public class Drive extends SubsystemBase {
           DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC(),
           DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC() * 5.0,
           DriveConstants.DRIVE_CONFIGURATION.MAX_ANGULAR_VELOCITY_RAD_PER_SEC());
-  private final SwerveSetpointGenerator SETPOINT_GENERATOR =
+  private SwerveSetpointGenerator SETPOINT_GENERATOR =
       new SwerveSetpointGenerator(DriveConstants.KINEMATICS, DriveConstants.MODULE_TRANSLATIONS);
   private ChassisSpeeds desiredSpeeds = new ChassisSpeeds();
   private DriveState desiredDriveState = DriveState.STOPPED;
@@ -83,5 +86,40 @@ public class Drive extends SubsystemBase {
     MODULES[2] = new Module(blModuleIO, 2);
     MODULES[3] = new Module(brModuleIO, 3);
     GYRO_IO = gyroIO;
+
+    // Configure setpoint generator
+    // TODO Why am I instantiating this twice
+    SETPOINT_GENERATOR =
+        SwerveSetpointGenerator.builder()
+            .kinematics(DriveConstants.KINEMATICS)
+            .moduleLocations(DriveConstants.MODULE_TRANSLATIONS)
+            .build();
+
+    // TODO Configure PathPlanner later ig
+
+    // TODO Add SysID configuration here later
+  }
+
+  @Override
+  public void periodic() {
+    GYRO_IO.updateInputs(GYRO_INPUTS);
+    Logger.processInputs("Drive/Gyro", GYRO_INPUTS);
+    for (var module : MODULES) {
+      module.periodic();
+    }
+
+    runDisabledChecks();
+  }
+
+  /** Handle edge cases when driver stations is disabled. Runs in {@link #periodic()} */
+  private void runDisabledChecks() {
+    if (DriverStation.isDisabled()) {
+      for (var module : MODULES) {
+        module.stop();
+      }
+
+      Logger.recordOutput("Drive/SwerveStates/Setpoints", new SwerveModuleState[] {});
+      Logger.recordOutput("Drive/SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
+    }
   }
 }
