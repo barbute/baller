@@ -17,10 +17,7 @@ public class DriveConstants {
       double WHEEL_RADIUS_METER,
       double TRACK_WIDTH_X_METER,
       double TRACK_WIDTH_Y_METER,
-      double MAX_LINEAR_VELOCITY_METER_PER_SEC,
-      double MAX_LINEAR_ACCELERATION_METER_PER_SEC_SQUARED,
-      double MAX_ANGULAR_VELOCITY_RAD_PER_SEC,
-      double MAX_ANGULAR_ACCELERATION_RAD_PER_SEC_SQUARED) {}
+      double MAX_LINEAR_VELOCITY_METER_PER_SEC) {}
 
   public record ModuleConfiguration(
       int DRIVE_MOTOR_ID,
@@ -65,12 +62,8 @@ public class DriveConstants {
             5.08 / 100.0, // Wheel radius TODO Check this bruh
             Units.inchesToMeters(24.25), // Track width X
             Units.inchesToMeters(24.25), // Track width Y
-            Units.feetToMeters(14.5), // Max linear velocity M/S
-            Units.feetToMeters(50.0), // Max linear acceleration M/S^2
-            // TODO Check this too bruh
-            12.0, // Max angular velocity Rad/S
-            6.0); // Max angular acceleration Rad/s^2
-        default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            Units.feetToMeters(14.5)); // Max linear velocity M/S
+        default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0);
       };
 
   public static final SparkMaxModuleConfiguration SPARK_CONFIGURATIONS =

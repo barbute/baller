@@ -16,6 +16,9 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.drive.controllers.TeleoperatedController;
+import java.util.function.DoubleSupplier;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 /** Subsystem representing a swerve drive, configurable in DriveConstants.java */
@@ -35,6 +38,13 @@ public class Drive extends SubsystemBase {
     /** Drivetrain is commanded to do nothing */
     STOPPED
   }
+
+  private static final double DRIVE_BASE_RADIUS =
+      Math.hypot(
+          DriveConstants.DRIVE_CONFIGURATION.TRACK_WIDTH_X_METER() / 2.0,
+          DriveConstants.DRIVE_CONFIGURATION.TRACK_WIDTH_Y_METER() / 2.0);
+  private static final double MAX_ANGULAR_SPEED_METER_PER_SEC =
+      DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC() / DRIVE_BASE_RADIUS;
 
   /** Organized as FL, FR, BL, BR */
   private final Module[] MODULES = new Module[4];
@@ -71,7 +81,7 @@ public class Drive extends SubsystemBase {
       new ModuleLimits(
           DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC(),
           DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC() * 5.0,
-          DriveConstants.DRIVE_CONFIGURATION.MAX_ANGULAR_VELOCITY_RAD_PER_SEC());
+          MAX_ANGULAR_SPEED_METER_PER_SEC);
   private SwerveSetpointGenerator SETPOINT_GENERATOR =
       new SwerveSetpointGenerator(DriveConstants.KINEMATICS, DriveConstants.MODULE_TRANSLATIONS);
   private SwerveSetpoint currentSetpoint =
@@ -84,6 +94,8 @@ public class Drive extends SubsystemBase {
             new SwerveModuleState()
           });
   private ChassisSpeeds desiredSpeeds = new ChassisSpeeds();
+
+  private TeleoperatedController teleoperatedController = null;
   private DriveState desiredDriveState = DriveState.STOPPED;
 
   public Drive(
@@ -121,6 +133,7 @@ public class Drive extends SubsystemBase {
 
     runDisabledChecks();
     updatePositions();
+    runDriveState();
   }
 
   /** Handle edge cases when driver stations is disabled. Runs in {@link #periodic()} */
@@ -161,6 +174,46 @@ public class Drive extends SubsystemBase {
     // Apply odometry update
     poseEstimator.update(rawGyroRotation, modulePositions);
     odometry.update(rawGyroRotation, modulePositions);
+  }
+
+  /**
+   * Set desired speeds and run desired actions based on the current commanded stated of the drive.
+   * Should ONLY be run in {@link #periodic()}
+   */
+  private void runDriveState() {
+    switch (desiredDriveState) {
+      case TELEOPERATED:
+        if (teleoperatedController != null) {
+          desiredSpeeds =
+              teleoperatedController.computeChassisSpeeds(
+                  poseEstimator.getEstimatedPosition().getRotation(),
+                  DriveConstants.KINEMATICS.toChassisSpeeds(getModuleStates()),
+                  DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC(),
+                  MAX_ANGULAR_SPEED_METER_PER_SEC);
+        }
+        break;
+      case TRAJECTORY:
+        break;
+      case AUTOALIGN:
+        break;
+      case CHARACTERIZATION:
+        desiredSpeeds = null;
+        break;
+      case SIMPLECHARACTERIZATION:
+        desiredSpeeds = null;
+        break;
+      case STOPPED:
+        desiredSpeeds = null;
+        stop();
+        break;
+      default:
+        desiredSpeeds = null;
+        break;
+    }
+
+    if (desiredSpeeds != null) {
+      runSetpoint(desiredSpeeds);
+    }
   }
 
   /**
@@ -244,6 +297,33 @@ public class Drive extends SubsystemBase {
     var twist = new Pose2d().log(desiredDeltaPose);
 
     return new ChassisSpeeds((twist.dx / dt), (twist.dy / dt), (speeds.omegaRadiansPerSecond));
+  }
+
+  /**
+   * Accept the joystick input from the controllers
+   *
+   * @param xSupplier Forward-backward input
+   * @param ySupplier Left-right input
+   * @param thetaSupplier Rotational input
+   */
+  public void acceptTeleroperatedInputs(
+      DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier thetaSupplier) {
+    teleoperatedController = new TeleoperatedController(xSupplier, ySupplier, thetaSupplier);
+  }
+
+  /** Stops the drive */
+  private void stop() {
+    runSetpoint(new ChassisSpeeds());
+  }
+
+  /** Returns the module states (turn angles and drive velocities) for all of the modules. */
+  @AutoLogOutput(key = "Drive/SwerveStates/Measured")
+  private SwerveModuleState[] getModuleStates() {
+    SwerveModuleState[] states = new SwerveModuleState[4];
+    for (int i = 0; i < 4; i++) {
+      states[i] = MODULES[i].getState();
+    }
+    return states;
   }
 
   /**
