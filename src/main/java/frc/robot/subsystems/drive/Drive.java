@@ -4,6 +4,11 @@
 
 package frc.robot.subsystems.drive;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.pathfinding.Pathfinding;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PathPlannerLogging;
+import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.LinearFilter;
@@ -18,11 +23,13 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.controllers.TeleoperatedController;
 import frc.robot.util.characterization.DriveIdentificationRoutine;
+import frc.robot.util.swerve.LocalADStarAK;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -127,9 +134,34 @@ public class Drive extends SubsystemBase {
             .moduleLocations(DriveConstants.MODULE_TRANSLATIONS)
             .build();
 
-    // TODO Configure PathPlanner later ig
+    configurePathPlanner();
+  }
 
-    // TODO Add SysID configuration here later
+  private void configurePathPlanner() {
+    // Configure AutoBuilder for PathPlanner
+    AutoBuilder.configureHolonomic(
+        (DriveConstants.USE_VISION_WITH_AUTO) ? this::getPoseEstimate : this::getOdometryPose,
+        this::setPose,
+        () -> DriveConstants.KINEMATICS.toChassisSpeeds(getModuleStates()),
+        this::runSetpoint,
+        new HolonomicPathFollowerConfig(
+            DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC(),
+            DRIVE_BASE_RADIUS,
+            new ReplanningConfig()),
+        () ->
+            DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get() == Alliance.Red,
+        this);
+    Pathfinding.setPathfinder(new LocalADStarAK());
+    PathPlannerLogging.setLogActivePathCallback(
+        (activePath) -> {
+          Logger.recordOutput(
+              "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
+        });
+    PathPlannerLogging.setLogTargetPoseCallback(
+        (targetPose) -> {
+          Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
+        });
   }
 
   @Override
@@ -206,7 +238,7 @@ public class Drive extends SubsystemBase {
       case AUTOALIGN:
         break;
       case CHARACTERIZATION:
-      // This case is handled separatly when the set state method is called
+        // This case is handled separatly when the set state method is called
         desiredSpeeds = null;
         break;
       case SIMPLECHARACTERIZATION:

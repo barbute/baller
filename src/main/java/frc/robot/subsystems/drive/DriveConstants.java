@@ -56,6 +56,7 @@ public class DriveConstants {
 
   public static final String CANIVORE_KEY = "CTREBUS";
   public static final boolean USE_CANIVORE = true;
+  public static final boolean USE_VISION_WITH_AUTO = true;
 
   public static final DriveConfiguration DRIVE_CONFIGURATION =
       switch (Constants.CURRENT_MODE) {
