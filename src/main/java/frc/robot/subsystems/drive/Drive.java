@@ -8,7 +8,9 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -72,6 +74,15 @@ public class Drive extends SubsystemBase {
           DriveConstants.DRIVE_CONFIGURATION.MAX_ANGULAR_VELOCITY_RAD_PER_SEC());
   private SwerveSetpointGenerator SETPOINT_GENERATOR =
       new SwerveSetpointGenerator(DriveConstants.KINEMATICS, DriveConstants.MODULE_TRANSLATIONS);
+  private SwerveSetpoint currentSetpoint =
+      new SwerveSetpoint(
+          new ChassisSpeeds(),
+          new SwerveModuleState[] {
+            new SwerveModuleState(),
+            new SwerveModuleState(),
+            new SwerveModuleState(),
+            new SwerveModuleState()
+          });
   private ChassisSpeeds desiredSpeeds = new ChassisSpeeds();
   private DriveState desiredDriveState = DriveState.STOPPED;
 
@@ -109,6 +120,7 @@ public class Drive extends SubsystemBase {
     }
 
     runDisabledChecks();
+    updatePositions();
   }
 
   /** Handle edge cases when driver stations is disabled. Runs in {@link #periodic()} */
@@ -121,5 +133,127 @@ public class Drive extends SubsystemBase {
       Logger.recordOutput("Drive/SwerveStates/Setpoints", new SwerveModuleState[] {});
       Logger.recordOutput("Drive/SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
     }
+  }
+
+  /** Update pose estimator and odometer. Should ONLY be run in {@link #periodic()} */
+  private void updatePositions() {
+    // Read wheel positions and deltas from each module
+    SwerveModulePosition[] modulePositions = getModulePositions();
+    SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+    for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
+      moduleDeltas[moduleIndex] =
+          new SwerveModulePosition(
+              modulePositions[moduleIndex].distanceMeters
+                  - lastModulePositions[moduleIndex].distanceMeters,
+              modulePositions[moduleIndex].angle);
+      lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+    }
+
+    // Update gyro angle
+    if (GYRO_INPUTS.connected) {
+      // Use the real gyro angle
+      rawGyroRotation = GYRO_INPUTS.yawPosition;
+    } else { // Use the angle delta from the kinematics and module deltas
+      Twist2d twist = DriveConstants.KINEMATICS.toTwist2d(moduleDeltas);
+      rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
+    }
+
+    // Apply odometry update
+    poseEstimator.update(rawGyroRotation, modulePositions);
+    odometry.update(rawGyroRotation, modulePositions);
+  }
+
+  /**
+   * Sets the subsystem's desired state, logic runs in periodic()
+   *
+   * @param desiredState The desired state
+   */
+  public void setDriveState(DriveState desiredState) {
+    desiredDriveState = desiredState;
+    // TODO: Add logic to reset the heading controller when I make that if the state is the heading
+    // controller
+  }
+
+  /**
+   * Runs the drive at the desired velocity.
+   *
+   * @param speeds Speeds in meters/sec
+   */
+  public void runSetpoint(ChassisSpeeds speeds) {
+    ChassisSpeeds desiredChassisSpeeds = new ChassisSpeeds();
+
+    // TODO Remove this later lol
+    boolean areModulesOrienting = false;
+
+    ChassisSpeeds discreteSpeeds = discretize(speeds); // Translational skew compensation
+    desiredChassisSpeeds = discreteSpeeds;
+    SwerveModuleState[] setpointStates =
+        DriveConstants.KINEMATICS.toSwerveModuleStates(discreteSpeeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(
+        setpointStates,
+        DriveConstants.DRIVE_CONFIGURATION.MAX_LINEAR_VELOCITY_METER_PER_SEC()); // Normalize speeds
+
+    SwerveModuleState[] optimizedSetpointStates = new SwerveModuleState[4];
+
+    if (!areModulesOrienting) {
+      currentSetpoint =
+          SETPOINT_GENERATOR.generateSetpoint(MODULE_LIMITS, currentSetpoint, discreteSpeeds, 0.02);
+
+      for (int i = 0; i < 4; i++) {
+        // Optimized azimuth setpoint angles
+        optimizedSetpointStates[i] =
+            SwerveModuleState.optimize(currentSetpoint.moduleStates()[i], MODULES[i].getAngle());
+
+        // Prevent jittering from small joystick inputs or noise
+        optimizedSetpointStates[i] =
+            (Math.abs(
+                        optimizedSetpointStates[i].speedMetersPerSecond
+                            / DriveConstants.DRIVE_CONFIGURATION
+                                .MAX_LINEAR_VELOCITY_METER_PER_SEC())
+                    > 0.01)
+                ? MODULES[i].runModuleState(optimizedSetpointStates[i])
+                : MODULES[i].runModuleState(
+                    new SwerveModuleState(
+                        optimizedSetpointStates[i].speedMetersPerSecond, MODULES[i].getAngle()));
+
+        // Run state
+        MODULES[i].runModuleState(optimizedSetpointStates[i]);
+      }
+    } else {
+      for (int i = 0; i < 4; i++) {
+        optimizedSetpointStates[i] =
+            MODULES[i].runModuleState(
+                setpointStates[i]); // setDesiredState returns the optimized state
+      }
+    }
+
+    // Log setpoint states
+    Logger.recordOutput("Drive/SwerveStates/Setpoints", setpointStates);
+    Logger.recordOutput("Drive/SwerveStates/SetpointsOptimized", optimizedSetpointStates);
+    Logger.recordOutput("Drive/SwerveStates/DesiredSpeeds", desiredChassisSpeeds);
+  }
+
+  /** Custom method for discretizing swerve speeds */
+  private ChassisSpeeds discretize(ChassisSpeeds speeds) {
+    double dt = 0.02;
+    var desiredDeltaPose =
+        new Pose2d(
+            speeds.vxMetersPerSecond * dt,
+            speeds.vyMetersPerSecond * dt,
+            new Rotation2d(speeds.omegaRadiansPerSecond * dt * 3));
+    var twist = new Pose2d().log(desiredDeltaPose);
+
+    return new ChassisSpeeds((twist.dx / dt), (twist.dy / dt), (speeds.omegaRadiansPerSecond));
+  }
+
+  /**
+   * @return the module positions (turn angles and drive positions) for all of the modules.
+   */
+  private SwerveModulePosition[] getModulePositions() {
+    SwerveModulePosition[] states = new SwerveModulePosition[4];
+    for (int i = 0; i < 4; i++) {
+      states[i] = MODULES[i].getPosition();
+    }
+    return states;
   }
 }
