@@ -6,14 +6,56 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.DriveConstants;
+import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.GyroIOPigeon2;
+import frc.robot.subsystems.drive.ModuleIO;
+import frc.robot.subsystems.drive.ModuleIOSim;
+import frc.robot.subsystems.drive.ModuleIOSparkMax;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
-/** Add your docs here. */
+/** Initalize robot hardware and input controllers */
 public class RobotContainer {
+  private final Drive DRIVE;
+
+  private final CommandXboxController PILOT_CONTROLLER = new CommandXboxController(0);
+
   private final LoggedDashboardChooser<Command> AUTONOMOUS_CHOOSER =
       new LoggedDashboardChooser<>("Auto Choices");
 
   public RobotContainer() {
+    switch (Constants.CURRENT_MODE) {
+      case REAL:
+        DRIVE =
+            new Drive(
+                new ModuleIOSparkMax(DriveConstants.MODULE_CONFIGURATIONS[0]),
+                new ModuleIOSparkMax(DriveConstants.MODULE_CONFIGURATIONS[1]),
+                new ModuleIOSparkMax(DriveConstants.MODULE_CONFIGURATIONS[2]),
+                new ModuleIOSparkMax(DriveConstants.MODULE_CONFIGURATIONS[3]),
+                new GyroIOPigeon2());
+        break;
+      case SIM:
+        DRIVE =
+            new Drive(
+                new ModuleIOSim(DriveConstants.MODULE_CONFIGURATIONS[0]),
+                new ModuleIOSim(DriveConstants.MODULE_CONFIGURATIONS[1]),
+                new ModuleIOSim(DriveConstants.MODULE_CONFIGURATIONS[2]),
+                new ModuleIOSim(DriveConstants.MODULE_CONFIGURATIONS[3]),
+                new GyroIO() {});
+        break;
+      default:
+        DRIVE =
+            new Drive(
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new GyroIO() {});
+        break;
+    }
+
     configureBindings();
     configureAutonomousRoutine();
   }
