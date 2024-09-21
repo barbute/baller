@@ -4,6 +4,12 @@
 
 package frc.robot.subsystems.drive;
 
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.LinearFilter;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Subsystem representing a swerve drive, configurable in DriveConstants.java */
@@ -14,6 +20,30 @@ public class Drive extends SubsystemBase {
 
   private final GyroIO GYRO_IO;
   private final GyroIOInputsAutoLogged GYRO_INPUTS = new GyroIOInputsAutoLogged();
+
+  private Rotation2d rawGyroRotation = new Rotation2d();
+  private SwerveModulePosition[] lastModulePositions =
+      new SwerveModulePosition[] {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+      };
+
+  /** Use for estimating robot pose with encoders and vision */
+  private SwerveDrivePoseEstimator poseEstimator =
+      new SwerveDrivePoseEstimator(
+          DriveConstants.KINEMATICS, rawGyroRotation, lastModulePositions, new Pose2d());
+  /**
+   * Use to measure robot pose with encoders; This can be used as a fallback if vision is unreliable
+   * during comp
+   */
+  private SwerveDriveOdometry odometry =
+      new SwerveDriveOdometry(DriveConstants.KINEMATICS, rawGyroRotation, lastModulePositions);
+  /** Used to filter x-pose data from the pose estimator as vision estimates can be a bit shakey */
+  private LinearFilter xPositionFilter = LinearFilter.movingAverage(5);
+  /** Used to filter y-pose data from the pose estimator as vision estimates can be a bit shakey */
+  private LinearFilter yPositionFilter = LinearFilter.movingAverage(5);
 
   public Drive(
       ModuleIO flModuleIO,
