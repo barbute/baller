@@ -4,10 +4,14 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.Drive.DriveState;
 import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
@@ -61,7 +65,26 @@ public class RobotContainer {
   }
 
   /** Set controller bindings here */
-  private void configureBindings() {}
+  private void configureBindings() {
+    DRIVE.acceptTeleroperatedInputs(
+        () -> -PILOT_CONTROLLER.getLeftY(),
+        () -> -PILOT_CONTROLLER.getLeftX(),
+        () -> -PILOT_CONTROLLER.getRightX());
+    DRIVE.setDefaultCommand(
+        Commands.run(() -> DRIVE.setDriveState(DriveState.TELEOPERATED), DRIVE));
+    // Reset heading
+    PILOT_CONTROLLER
+        .b()
+        .onTrue(
+            Commands.runOnce(
+                    () ->
+                        DRIVE.setPose(
+                            new Pose2d(
+                                DRIVE.getOdometryPose().getTranslation(),
+                                new Rotation2d())), // Use odometry for now, use vision later
+                    DRIVE)
+                .ignoringDisable(true));
+  }
 
   private void configureAutonomousRoutine() {
     AUTONOMOUS_CHOOSER.addDefaultOption("Print Command", new PrintCommand("Hello, world!"));
