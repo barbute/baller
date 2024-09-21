@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import frc.robot.Constants;
+import frc.robot.util.characterization.DriveIdentificationRoutine.MotorType;
 
 /** Swerve constants class */
 public class DriveConstants {
@@ -17,7 +18,8 @@ public class DriveConstants {
       double WHEEL_RADIUS_METER,
       double TRACK_WIDTH_X_METER,
       double TRACK_WIDTH_Y_METER,
-      double MAX_LINEAR_VELOCITY_METER_PER_SEC) {}
+      double MAX_LINEAR_VELOCITY_METER_PER_SEC,
+      MotorType MOTOR_TYPE) {}
 
   public record ModuleConfiguration(
       int DRIVE_MOTOR_ID,
@@ -62,8 +64,9 @@ public class DriveConstants {
             5.08 / 100.0, // Wheel radius TODO Check this bruh
             Units.inchesToMeters(24.25), // Track width X
             Units.inchesToMeters(24.25), // Track width Y
-            Units.feetToMeters(14.5)); // Max linear velocity M/S
-        default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0);
+            Units.feetToMeters(14.5),
+            MotorType.NEO); // Max linear velocity M/S
+        default -> new DriveConfiguration(10, 0.0, 0.0, 0.0, 0.0, MotorType.NEO);
       };
 
   public static final SparkMaxModuleConfiguration SPARK_CONFIGURATIONS =

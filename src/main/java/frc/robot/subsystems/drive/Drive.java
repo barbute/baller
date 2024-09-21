@@ -18,8 +18,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.controllers.TeleoperatedController;
+import frc.robot.util.characterization.DriveIdentificationRoutine;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -100,6 +103,9 @@ public class Drive extends SubsystemBase {
 
   private TeleoperatedController teleoperatedController = null;
   private DriveState desiredDriveState = DriveState.STOPPED;
+
+  private final DriveIdentificationRoutine SYSTEM_IDENTIFICATION_ROUTINE =
+      new DriveIdentificationRoutine();
 
   public Drive(
       ModuleIO flModuleIO,
@@ -200,6 +206,7 @@ public class Drive extends SubsystemBase {
       case AUTOALIGN:
         break;
       case CHARACTERIZATION:
+      // This case is handled separatly when the set state method is called
         desiredSpeeds = null;
         break;
       case SIMPLECHARACTERIZATION:
@@ -227,10 +234,19 @@ public class Drive extends SubsystemBase {
    *
    * @param desiredState The desired state
    */
-  public void setDriveState(DriveState desiredState) {
+  public Command setDriveState(DriveState desiredState) {
     desiredDriveState = desiredState;
     // TODO: Add logic to reset the heading controller when I make that if the state is the heading
     // controller
+
+    // SysID routine only runs via command, so we always must return a command
+    // Janky? Absolutely. Do I care much? Not really.
+    if (desiredState == DriveState.CHARACTERIZATION) {
+      return SYSTEM_IDENTIFICATION_ROUTINE.executeIdentificationRoutineCommand(
+          this, MODULES, DriveConstants.DRIVE_CONFIGURATION.MOTOR_TYPE());
+    } else {
+      return new PrintCommand("Setting state to " + desiredState.toString());
+    }
   }
 
   /**
