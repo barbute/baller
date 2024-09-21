@@ -201,6 +201,9 @@ public class Drive extends SubsystemBase {
         break;
       case SIMPLECHARACTERIZATION:
         desiredSpeeds = null;
+        double characterizationVoltage = 3.0;
+        runSimpleCharacterization(characterizationVoltage);
+        Logger.recordOutput("Drive/SimpleCharacterizationVoltage", characterizationVoltage);
         break;
       case STOPPED:
         desiredSpeeds = null;
@@ -309,6 +312,18 @@ public class Drive extends SubsystemBase {
   public void acceptTeleroperatedInputs(
       DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier thetaSupplier) {
     teleoperatedController = new TeleoperatedController(xSupplier, ySupplier, thetaSupplier);
+  }
+
+  /**
+   * Runs the drive motors (locked forward) with the applied voltage. Remember that kV for drive is
+   * Voltage / Velocity
+   *
+   * @param volts Voltage to run the drive motors at
+   */
+  public void runSimpleCharacterization(double volts) {
+    for (Module mod : MODULES) {
+      mod.runCharacterization(volts);
+    }
   }
 
   /** Stops the drive */
